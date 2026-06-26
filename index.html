@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="uk" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d5e29">
+<title>ZR Club</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root[data-theme="dark"]{
+    --bg:#000; --fg:#fff; --muted:#7d7d7d; --line:#1d1d1d; --card:#0c0c0c; --inset:#000;
+    --zr:#1f9a3f; --zr-dim:#0d5e29; --on-zr:#fff;
+    --red:#ff453a; --amber:#ffd60a; --blue:#2fd0ff;
+    --beltw:#e9e9e9; --beltb:#2f6bff; --beltp:#9b51e0; --beltbr:#7a4a20; --beltk:#111;
+  }
+  :root[data-theme="light"]{
+    --bg:#eef0ee; --fg:#0c1a0f; --muted:#5f6b62; --line:#d6dcd7; --card:#ffffff; --inset:#f2f4f2;
+    --zr:#1f9a3f; --zr-dim:#0d5e29; --on-zr:#fff;
+    --red:#d62a20; --amber:#b8860b; --blue:#0a86b8;
+    --beltw:#cfcfcf; --beltb:#2f6bff; --beltp:#9b51e0; --beltbr:#7a4a20; --beltk:#111;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif;
+    overflow:hidden; user-select:none; -webkit-user-select:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);}
+  input{user-select:text; -webkit-user-select:text;}
+  .screen{position:fixed; inset:0; display:none; flex-direction:column;}
+  .screen.active{display:flex;}
+  .pad-top{padding-top:env(safe-area-inset-top);}
+
+  /* header */
+  header{display:flex; align-items:center; justify-content:space-between; padding:calc(10px + env(safe-area-inset-top)) 16px 8px;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand img{width:38px; height:38px; border-radius:50%; background:#fff;}
+  .brand .word{font-family:'Outfit',sans-serif; font-size:22px; font-weight:800; letter-spacing:-.5px;}
+  .brand .word .g{color:var(--zr);}
+  .hdr-btns{display:flex; gap:8px;}
+  .iconbtn{height:40px; min-width:40px; padding:0 11px; border-radius:11px; border:1px solid var(--line); background:var(--card); color:var(--fg); font-size:15px; font-weight:700;}
+
+  .body{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:6px 14px calc(90px + env(safe-area-inset-bottom));}
+  .h3{font-size:12px; text-transform:uppercase; letter-spacing:1.3px; color:var(--muted); font-weight:700; margin:18px 4px 10px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px;}
+
+  /* lock */
+  #lock.active{display:flex; align-items:center; justify-content:center;}
+  .lockbox{width:100%; max-width:340px; padding:24px; text-align:center;}
+  .lockbox img{width:84px; height:84px; border-radius:50%; background:#fff; margin-bottom:18px;}
+  .lockbox h1{font-family:'Outfit',sans-serif; font-size:26px; font-weight:800; margin-bottom:6px;}
+  .lockbox h1 .g{color:var(--zr);}
+  .lock-sub{color:var(--muted); font-size:14px; margin-bottom:22px;}
+  .dots{display:flex; gap:14px; justify-content:center; margin-bottom:26px;}
+  .dot{width:16px; height:16px; border-radius:50%; border:2px solid var(--zr); transition:.15s;}
+  .dot.on{background:var(--zr);}
+  .dot.err{border-color:var(--red); background:var(--red);}
+  .keys{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; max-width:280px; margin:0 auto;}
+  .key{height:68px; border-radius:50%; border:1px solid var(--line); background:var(--card); color:var(--fg); font-size:26px; font-weight:600;}
+  .key:active{background:var(--zr-dim); color:#fff;}
+  .key.blank{background:transparent; border:none;}
+  .lock-err{color:var(--red); font-size:13px; min-height:18px; margin-top:14px;}
+
+  /* bottom nav */
+  .nav{position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--card); border-top:1px solid var(--line);
+       padding-bottom:env(safe-area-inset-bottom); z-index:20;}
+  .nav button{flex:1; padding:9px 0 8px; background:none; border:none; color:var(--muted); font-size:10.5px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:3px;}
+  .nav button .ic{font-size:21px; line-height:1;}
+  .nav button.on{color:var(--zr);}
+
+  /* stats / dashboard */
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px;}
+  .stat .n{font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1;}
+  .stat .l{font-size:12px; color:var(--muted); margin-top:6px;}
+  .stat.green .n{color:var(--zr);} .stat.red .n{color:var(--red);} .stat.blue .n{color:var(--blue);}
+  .stat.tap:active{border-color:var(--zr);}
+  .beltbars{display:flex; flex-direction:column; gap:8px;}
+  .beltbar{display:flex; align-items:center; gap:10px; font-size:13px;}
+  .beltbar .bw{width:78px; display:flex; align-items:center; gap:7px;}
+  .beltbar .track{flex:1; height:9px; background:var(--inset); border-radius:5px; overflow:hidden;}
+  .beltbar .fill{height:100%; background:var(--zr); border-radius:5px;}
+  .beltbar .c{width:22px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums;}
+
+  /* belt chip */
+  .belt{display:inline-flex; align-items:center; gap:5px;}
+  .belt .bar{width:26px; height:13px; border-radius:3px; border:1px solid rgba(128,128,128,.4); position:relative; display:flex; align-items:center; justify-content:flex-end; padding-right:2px; gap:1.5px;}
+  .belt .bar.white{background:var(--beltw);} .belt .bar.blue{background:var(--beltb);}
+  .belt .bar.purple{background:var(--beltp);} .belt .bar.brown{background:var(--beltbr);} .belt .bar.black{background:var(--beltk);}
+  .belt .bar .blk{width:13px;height:13px;background:#111;border-radius:0 2px 2px 0;position:absolute;right:0;top:-1px;border:1px solid rgba(128,128,128,.4);}
+  .belt .bar .st{width:2px; height:9px; background:#fff; z-index:1;}
+  .belt .bar.white .st,.belt .bar.black .st{background:#d11;}
+
+  /* member rows */
+  .seg{display:flex; gap:7px; overflow-x:auto; padding:4px 2px 10px;}
+  .seg::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto; padding:8px 13px; border:1px solid var(--line); border-radius:999px; font-size:13px; color:var(--fg); background:var(--card); font-weight:600;}
+  .chip.on{border-color:var(--zr); color:var(--zr); box-shadow:0 0 0 1px var(--zr) inset;}
+  .search{width:100%; background:var(--card); border:1px solid var(--line); color:var(--fg); border-radius:12px; padding:12px 14px; font-size:15px; margin-bottom:6px;}
+  .mrow{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:9px;}
+  .mrow .av{width:42px; height:42px; border-radius:50%; background:var(--inset); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; color:var(--zr); flex:0 0 auto;}
+  .mrow .mid{flex:1; min-width:0;}
+  .mrow .nm{font-size:16px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mrow .sub{font-size:12px; color:var(--muted); margin-top:3px; display:flex; align-items:center; gap:8px;}
+  .pay-dot{width:10px; height:10px; border-radius:50%; flex:0 0 auto;}
+  .pay-dot.ok{background:var(--zr);} .pay-dot.no{background:var(--red);}
+  .empty{text-align:center; color:var(--muted); font-size:14px; padding:40px 20px; line-height:1.6;}
+
+  /* buttons / forms */
+  .btn{width:100%; padding:15px; border-radius:14px; border:none; font-size:16px; font-weight:800; letter-spacing:.3px;}
+  .btn.primary{background:var(--zr); color:var(--on-zr);}
+  .btn.ghost{background:var(--card); color:var(--fg); border:1px solid var(--line);}
+  .btn.danger{background:transparent; color:var(--red); border:1px solid var(--line);}
+  .fab{position:fixed; right:16px; bottom:calc(78px + env(safe-area-inset-bottom)); width:58px; height:58px; border-radius:50%; background:var(--zr); color:#fff; border:none; font-size:30px; box-shadow:0 6px 18px rgba(0,0,0,.4); z-index:15;}
+  label.fl{display:block; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:14px 4px 6px;}
+  .inp{width:100%; background:var(--card); border:1px solid var(--line); color:var(--fg); border-radius:12px; padding:13px 14px; font-size:16px;}
+  select.inp{appearance:none; -webkit-appearance:none;}
+  .rowflex{display:flex; gap:10px;} .rowflex>*{flex:1;}
+
+  /* detail */
+  .dtop{display:flex; align-items:center; gap:14px; padding:8px 4px 4px;}
+  .dtop .av{width:60px; height:60px; border-radius:50%; background:var(--inset); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:22px; color:var(--zr);}
+  .dtop .nm{font-size:22px; font-weight:800;}
+  .dtop .sub{font-size:13px; color:var(--muted); margin-top:3px;}
+  .kv{display:flex; justify-content:space-between; align-items:center; padding:11px 0; border-top:1px solid var(--line); font-size:14px;}
+  .kv:first-child{border-top:none;}
+  .kv .k{color:var(--muted);}
+  .stripes{display:flex; gap:6px;}
+  .stripe{width:22px; height:22px; border-radius:50%; border:2px solid var(--zr);}
+  .stripe.on{background:var(--zr);}
+  .miniadd{background:none; border:1px solid var(--zr-dim); color:var(--zr); border-radius:999px; padding:5px 11px; font-size:12px; font-weight:700;}
+  .note{background:var(--inset); border:1px solid var(--line); border-radius:11px; padding:10px 12px; margin-bottom:8px; font-size:14px; display:flex; justify-content:space-between; gap:10px; align-items:flex-start;}
+  .note .x{color:var(--red); font-size:15px; flex:0 0 auto;}
+  .note .dt{font-size:11px; color:var(--muted); margin-top:4px;}
+  .paygrid{display:grid; grid-template-columns:repeat(4,1fr); gap:7px;}
+  .paym{text-align:center; padding:9px 0; border-radius:10px; border:1px solid var(--line); background:var(--inset); font-size:12px;}
+  .paym.ok{background:var(--zr-dim); border-color:var(--zr); color:#fff;}
+  .paym .mm{font-weight:700;} .paym .yy{font-size:10px; color:var(--muted);}
+  .paym.ok .yy{color:#cfe9d4;}
+
+  .topbar{display:flex; align-items:center; gap:8px; padding:calc(8px + env(safe-area-inset-top)) 12px 8px;}
+  .topbar .back{background:none; border:none; color:var(--zr); font-size:16px; font-weight:700; padding:6px;}
+  .topbar .ttl{flex:1; font-size:17px; font-weight:800; text-align:center;}
+  .topbar .rt{min-width:54px; text-align:right;}
+  .topbar .rt button{background:none; border:none; color:var(--zr); font-size:15px; font-weight:700;}
+  .modal-actions{display:flex; gap:10px; margin-top:18px;}
+  .modal-actions>*{flex:1;}
+</style>
+</head>
+<body>
+
+<!-- ============ LOCK ============ -->
+<section id="lock" class="screen active">
+  <div class="lockbox">
+    <img src="icons/icon-192.png" alt="ZR">
+    <h1>ZR <span class="g">Club</span></h1>
+    <div class="lock-sub" id="lockSub">Введіть PIN-код</div>
+    <div class="dots" id="dots"></div>
+    <div class="keys" id="keys"></div>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD ============ -->
+<section id="dashboard" class="screen">
+  <header>
+    <div class="brand"><img src="icons/icon-192.png"><div class="word">ZR <span class="g">Club</span></div></div>
+    <div class="hdr-btns"><button class="iconbtn" id="langBtn">UA</button><button class="iconbtn" id="themeBtn">🌙</button></div>
+  </header>
+  <div class="body" id="dashBody"></div>
+</section>
+
+<!-- ============ MEMBERS ============ -->
+<section id="members" class="screen">
+  <header>
+    <div class="brand"><div class="word" id="memTitle">Учасники</div></div>
+    <div class="hdr-btns"><button class="iconbtn" id="langBtn2">UA</button><button class="iconbtn" id="themeBtn2">🌙</button></div>
+  </header>
+  <div class="body">
+    <input class="search" id="search" placeholder="Пошук…">
+    <div class="seg" id="groupTabs"></div>
+    <div class="seg" id="filterChips"></div>
+    <div id="memberList"></div>
+  </div>
+  <button class="fab" id="addFab">＋</button>
+</section>
+
+<!-- ============ ATTENDANCE ============ -->
+<section id="attendance" class="screen">
+  <div class="topbar">
+    <button class="back" id="attBack">‹</button>
+    <div class="ttl" id="attTitle">Відвідуваність</div>
+    <div class="rt"></div>
+  </div>
+  <div class="body">
+    <div class="h3" id="attDateLbl"></div>
+    <div class="seg" id="attGroupTabs"></div>
+    <div id="attList"></div>
+  </div>
+</section>
+
+<!-- ============ MEMBER DETAIL ============ -->
+<section id="member" class="screen">
+  <div class="topbar">
+    <button class="back" id="mBack">‹</button>
+    <div class="ttl" id="mTitle"></div>
+    <div class="rt"><button id="mEdit">✎</button></div>
+  </div>
+  <div class="body" id="memberBody"></div>
+</section>
+
+<!-- ============ EDIT/ADD ============ -->
+<section id="edit" class="screen">
+  <div class="topbar">
+    <button class="back" id="eCancel">Скасувати</button>
+    <div class="ttl" id="eTitle"></div>
+    <div class="rt"><button id="eSave">OK</button></div>
+  </div>
+  <div class="body" id="editBody"></div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section id="settings" class="screen">
+  <header>
+    <div class="brand"><div class="word" id="setTitle">Налаштування</div></div>
+    <div class="hdr-btns"></div>
+  </header>
+  <div class="body" id="settingsBody"></div>
+</section>
+
+<!-- ============ BOTTOM NAV ============ -->
+<nav class="nav" id="nav" style="display:none">
+  <button data-tab="dashboard" class="on"><span class="ic">▦</span><span data-i18n="navDash">Огляд</span></button>
+  <button data-tab="members"><span class="ic">☰</span><span data-i18n="navMembers">Учасники</span></button>
+  <button data-tab="attendance"><span class="ic">✓</span><span data-i18n="navAtt">Відвідув.</span></button>
+  <button data-tab="settings"><span class="ic">⚙</span><span data-i18n="navSet">Налашт.</span></button>
+</nav>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const pad=n=>String(n).padStart(2,'0');
+const todayStr=()=>{const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
+const monthKey=d=>{d=d||new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1);};
+
+//============ I18N ============
+const I18N={
+ ua:{lang:'UA', enterPin:'Введіть PIN-код', setPin:'Придумайте PIN-код', repeatPin:'Повторіть PIN-код', pinMismatch:'PIN не співпав, спробуйте ще', wrongPin:'Невірний PIN',
+   navDash:'Огляд', navMembers:'Учасники', navAtt:'Відвідув.', navSet:'Налашт.',
+   members:'Учасники', attendance:'Відвідуваність', settings:'Налаштування',
+   total:'Учасників', paidM:'Оплатили', unpaidM:'Борг', todayHere:'Сьогодні',
+   beltDist:'Розподіл по поясах', inactive:'Давно не були', noInactive:'Усі активні 👌',
+   search:'Пошук…', all:'Усі', unpaidF:'Боржники', inactiveF:'Неактивні',
+   noMembers:'Поки що порожньо.\nНатисніть ＋ щоб додати учасника.',
+   firstName:'Імʼя', lastName:'Прізвище', group:'Група', belt:'Пояс', stripes:'Страйпи',
+   paidThisMonth:'Оплата за цей місяць', addMember:'Новий учасник', editMember:'Редагувати',
+   save:'OK', cancel:'Скасувати', del:'Видалити', delMemberQ:'Видалити учасника «$»?',
+   white:'Білий', blue:'Синій', purple:'Фіолетовий', brown:'Коричневий', black:'Чорний',
+   inGrade:'у поясі', months:'міс', promote:'Підвищити (записати дату)',
+   payments:'Оплати', notes:'Заметки тренера', addNote:'＋ Заметка', notePh:'Текст заметки…',
+   comps:'Соревнування', addComp:'＋ Турнір', compName:'Назва турніру', compResult:'Результат', compDate:'Дата',
+   beltHist:'Історія поясів', attendanceCount:'Відвідувань', lastSeen:'Останній раз', never:'ніколи', markToday:'Відмітьте присутніх',
+   present:'тут', export:'Експорт (резервна копія)', import:'Імпорт', changePin:'Змінити PIN',
+   theme:'Тема', language:'Мова', dataEnc:'🔒 Дані зашифровані PIN-ом і зберігаються лише на цьому пристрої.',
+   newGroup:'Нова група…', addGroup:'＋ Група', groupNamePrompt:'Назва групи:', noComps:'Турнірів немає', noNotes:'Заметок немає',
+   exported:'Файл збережено', importQ:'Замінити всі дані з файлу? Поточні буде втрачено.', importBad:'Не вдалося прочитати файл (невірний PIN або формат).',
+   confirmDel:'Видалити?'},
+ en:{lang:'EN', enterPin:'Enter PIN', setPin:'Create a PIN', repeatPin:'Repeat PIN', pinMismatch:"PIN didn't match, try again", wrongPin:'Wrong PIN',
+   navDash:'Overview', navMembers:'Members', navAtt:'Check-in', navSet:'Settings',
+   members:'Members', attendance:'Attendance', settings:'Settings',
+   total:'Members', paidM:'Paid', unpaidM:'Due', todayHere:'Today',
+   beltDist:'Belt distribution', inactive:'Inactive', noInactive:'All active 👌',
+   search:'Search…', all:'All', unpaidF:'Unpaid', inactiveF:'Inactive',
+   noMembers:'Empty for now.\nTap ＋ to add a member.',
+   firstName:'First name', lastName:'Last name', group:'Group', belt:'Belt', stripes:'Stripes',
+   paidThisMonth:'Paid this month', addMember:'New member', editMember:'Edit',
+   save:'OK', cancel:'Cancel', del:'Delete', delMemberQ:'Delete member “$”?',
+   white:'White', blue:'Blue', purple:'Purple', brown:'Brown', black:'Black',
+   inGrade:'in grade', months:'mo', promote:'Promote (log date)',
+   payments:'Payments', notes:'Coach notes', addNote:'＋ Note', notePh:'Note text…',
+   comps:'Competitions', addComp:'＋ Event', compName:'Event name', compResult:'Result', compDate:'Date',
+   beltHist:'Belt history', attendanceCount:'Sessions', lastSeen:'Last seen', never:'never', markToday:'Mark present',
+   present:'here', export:'Export (backup)', import:'Import', changePin:'Change PIN',
+   theme:'Theme', language:'Language', dataEnc:'🔒 Data is encrypted with your PIN and stored only on this device.',
+   newGroup:'New group…', addGroup:'＋ Group', groupNamePrompt:'Group name:', noComps:'No competitions', noNotes:'No notes',
+   exported:'File saved', importQ:'Replace all data from file? Current data will be lost.', importBad:'Could not read file (wrong PIN or format).',
+   confirmDel:'Delete?'}
+};
+let T=I18N.ua;
+const BELTS=['white','blue','purple','brown','black'];
+function beltName(b){ return T[b]||b; }
+
+//============ CRYPTO + STORAGE ============
+let DB=null, KEY=null, SALT=null;
+const b64=u=>btoa(String.fromCharCode.apply(null,new Uint8Array(u)));
+const ub64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function deriveKey(pin,salt){
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptDB(){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const data=new TextEncoder().encode(JSON.stringify(DB));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},KEY,data);
+  return b64(iv)+'.'+b64(ct);
+}
+async function decryptWith(blob,key){
+  const [ivb,ctb]=blob.split('.');
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(ivb)},key,ub64(ctb));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+let saveChain=Promise.resolve();
+function save(){ saveChain=saveChain.then(async()=>{ if(KEY) localStorage.setItem('zrclub_db',await encryptDB()); }); return saveChain; }
+function uiPrefs(){ try{return JSON.parse(localStorage.getItem('zrclub_ui'))||{};}catch(e){return {};} }
+function saveUi(){ localStorage.setItem('zrclub_ui',JSON.stringify({lang:DB?DB.settings.lang:T===I18N.en?'en':'ua', theme:document.documentElement.getAttribute('data-theme')})); }
+
+//============ PIN LOCK ============
+let pinBuf='', pinMode='unlock', pinFirst='';
+function buildKeys(){
+  const k=$('#keys'); k.innerHTML='';
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(d=>{
+    const b=document.createElement('button');
+    if(d===''){ b.className='key blank'; b.disabled=true; }
+    else { b.className='key'; b.textContent=d; b.onclick=()=>pinPress(d); }
+    k.appendChild(b);
+  });
+}
+function renderDots(err){ const d=$('#dots'); d.innerHTML=''; for(let i=0;i<4;i++){ const e=document.createElement('div'); e.className='dot'+(i<pinBuf.length?' on':'')+(err?' err':''); d.appendChild(e);} }
+function pinPress(d){
+  $('#lockErr').textContent='';
+  if(d==='⌫'){ pinBuf=pinBuf.slice(0,-1); renderDots(); return; }
+  if(pinBuf.length>=4) return;
+  pinBuf+=d; renderDots();
+  if(pinBuf.length===4) setTimeout(pinComplete,120);
+}
+async function pinComplete(){
+  const db=localStorage.getItem('zrclub_db'), saltRaw=localStorage.getItem('zrclub_salt');
+  if(!saltRaw||!db){ // first run: set pin
+    if(pinMode==='unlock'){ pinMode='set'; }
+    if(pinMode==='set'){ pinFirst=pinBuf; pinBuf=''; pinMode='repeat'; $('#lockSub').textContent=T.repeatPin; renderDots(); return; }
+    if(pinMode==='repeat'){
+      if(pinBuf!==pinFirst){ pinFail(T.pinMismatch); pinMode='set'; pinFirst=''; $('#lockSub').textContent=T.setPin; return; }
+      const salt=crypto.getRandomValues(new Uint8Array(16));
+      KEY=await deriveKey(pinFirst,salt); SALT=salt;
+      localStorage.setItem('zrclub_salt',b64(salt));
+      const ui=uiPrefs();
+      DB={members:[], groups:[{id:'g1',name:ui.lang==='en'?'Beginners':'Новачки'},{id:'g2',name:ui.lang==='en'?'Veterans':'Старички'}], settings:{lang:ui.lang||'ua', theme:ui.theme||'dark'}};
+      await save(); enterApp(); return;
+    }
+  }
+  // unlock existing
+  try{
+    const salt=ub64(saltRaw); const key=await deriveKey(pinBuf,salt);
+    const data=await decryptWith(db,key);
+    KEY=key; SALT=salt; DB=data; enterApp();
+  }catch(e){ pinFail(T.wrongPin); }
+}
+function pinFail(msg){ renderDots(true); $('#lockErr').textContent=msg; pinBuf=''; setTimeout(()=>renderDots(),500); }
+
+function setupLock(){
+  const db=localStorage.getItem('zrclub_db'), salt=localStorage.getItem('zrclub_salt');
+  pinMode=(db&&salt)?'unlock':'set';
+  $('#lockSub').textContent=pinMode==='unlock'?T.enterPin:T.setPin;
+  pinBuf=''; pinFirst=''; renderDots(); buildKeys();
+}
+
+//============ APP NAV ============
+let curTab='dashboard', editingId=null, viewingId=null;
+function enterApp(){
+  applyLangAll();
+  $('#nav').style.display='flex';
+  showTab('dashboard');
+}
+function showScreen(id){ $$('.screen').forEach(s=>s.classList.remove('active')); $('#'+id).classList.add('active'); }
+function showTab(tab){
+  curTab=tab; showScreen(tab);
+  $$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  $('#nav').style.display=['dashboard','members','attendance','settings'].includes(tab)?'flex':'flex';
+  if(tab==='dashboard') renderDash();
+  if(tab==='members') renderMembers();
+  if(tab==='attendance') renderAttendance();
+  if(tab==='settings') renderSettings();
+}
+$$('#nav button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+//============ HELPERS ============
+function initials(m){ return ((m.first||'?')[0]+(m.last||'')[0]||'').toUpperCase(); }
+function fullName(m){ return (m.first+' '+(m.last||'')).trim(); }
+function groupName(id){ const g=DB.groups.find(x=>x.id===id); return g?g.name:'—'; }
+function isPaid(m,mk){ return !!(m.payments&&m.payments[mk||monthKey()]); }
+function lastSeen(m){ if(!m.attendance||!m.attendance.length) return null; return m.attendance.slice().sort().pop(); }
+function daysSince(ds){ if(!ds) return Infinity; return Math.floor((Date.now()-new Date(ds+'T00:00:00').getTime())/86400000); }
+function isInactive(m){ return daysSince(lastSeen(m))>21; }
+function monthsInGrade(m){ const h=(m.beltHistory||[]); if(!h.length) return null; const last=h.slice().sort((a,b)=>a.date<b.date?-1:1).pop(); return Math.floor((Date.now()-new Date(last.date+'T00:00:00').getTime())/2629800000); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function beltChip(belt,stripes){
+  const n=Math.max(0,Math.min(4,stripes||0));
+  let st=''; for(let i=0;i<n;i++) st+='<span class="st"></span>';
+  const blk=belt==='black'?'<span class="blk"></span>':'';
+  return `<span class="belt"><span class="bar ${belt}">${st}${blk}</span></span>`;
+}
+
+//============ DASHBOARD ============
+function renderDash(){
+  const mk=monthKey(), today=todayStr();
+  const ms=DB.members;
+  const paid=ms.filter(m=>isPaid(m,mk)).length;
+  const unpaid=ms.length-paid;
+  const here=ms.filter(m=>(m.attendance||[]).includes(today)).length;
+  const dist={}; BELTS.forEach(b=>dist[b]=0); ms.forEach(m=>{ if(dist[m.belt]!=null) dist[m.belt]++; });
+  const maxd=Math.max(1,...Object.values(dist));
+  const inactives=ms.filter(isInactive);
+  let h='';
+  h+=`<div class="h3">${T.navDash}</div>`;
+  h+=`<div class="stat-grid">
+    <div class="stat"><div class="n">${ms.length}</div><div class="l">${T.total}</div></div>
+    <div class="stat green"><div class="n">${paid}</div><div class="l">${T.paidM} · ${mk}</div></div>
+    <div class="stat red tap" id="goUnpaid"><div class="n">${unpaid}</div><div class="l">${T.unpaidM} · ${mk}</div></div>
+    <div class="stat blue"><div class="n">${here}</div><div class="l">${T.todayHere}</div></div>
+  </div>`;
+  h+=`<div class="h3">${T.beltDist}</div><div class="card beltbars">`;
+  BELTS.forEach(b=>{ h+=`<div class="beltbar"><div class="bw">${beltChip(b,0)}<span>${beltName(b)}</span></div><div class="track"><div class="fill" style="width:${dist[b]/maxd*100}%"></div></div><div class="c">${dist[b]}</div></div>`; });
+  h+=`</div>`;
+  h+=`<div class="h3">${T.inactive}</div>`;
+  if(!inactives.length) h+=`<div class="card empty" style="padding:20px">${T.noInactive}</div>`;
+  else { inactives.forEach(m=>{ const ls=lastSeen(m); h+=memberRowHTML(m,`${T.lastSeen}: ${ls?ls+' ('+daysSince(ls)+'d)':T.never}`); }); h=h; }
+  $('#dashBody').innerHTML=h;
+  const gu=$('#goUnpaid'); if(gu) gu.onclick=()=>{ curFilter='unpaid'; showTab('members'); };
+  bindMemberRows($('#dashBody'));
+}
+
+//============ MEMBERS ============
+let curGroup='all', curFilter='all', curSearch='';
+function memberRowHTML(m,subOverride){
+  const paid=isPaid(m);
+  const sub=subOverride!=null?esc(subOverride):`${groupName(m.group)}`;
+  return `<div class="mrow" data-id="${m.id}">
+    <div class="av">${esc(initials(m))}</div>
+    <div class="mid"><div class="nm">${esc(fullName(m))}</div>
+      <div class="sub">${beltChip(m.belt,m.stripes)}<span>${sub}</span></div></div>
+    <div class="pay-dot ${paid?'ok':'no'}"></div>
+  </div>`;
+}
+function bindMemberRows(root){ (root||document).querySelectorAll('.mrow').forEach(r=>r.onclick=()=>openMember(r.dataset.id)); }
+function renderMembers(){
+  $('#memTitle').textContent=T.members;
+  // group tabs
+  const gt=$('#groupTabs'); gt.innerHTML='';
+  const tabs=[['all',T.all]].concat(DB.groups.map(g=>[g.id,g.name]));
+  tabs.forEach(([id,name])=>{ const b=document.createElement('button'); b.className='chip'+(curGroup===id?' on':''); b.textContent=name; b.onclick=()=>{curGroup=id; renderMembers();}; gt.appendChild(b); });
+  const ga=document.createElement('button'); ga.className='chip'; ga.textContent=T.addGroup; ga.onclick=addGroup; gt.appendChild(ga);
+  // filter chips
+  const fc=$('#filterChips'); fc.innerHTML='';
+  [['all',T.all],['unpaid',T.unpaidF],['inactive',T.inactiveF]].forEach(([id,name])=>{ const b=document.createElement('button'); b.className='chip'+(curFilter===id?' on':''); b.textContent=name; b.onclick=()=>{curFilter=id; renderMembers();}; fc.appendChild(b); });
+  // list
+  let list=DB.members.slice();
+  if(curGroup!=='all') list=list.filter(m=>m.group===curGroup);
+  if(curFilter==='unpaid') list=list.filter(m=>!isPaid(m));
+  if(curFilter==='inactive') list=list.filter(isInactive);
+  if(curSearch) list=list.filter(m=>fullName(m).toLowerCase().includes(curSearch.toLowerCase()));
+  list.sort((a,b)=>fullName(a).localeCompare(fullName(b)));
+  const box=$('#memberList');
+  if(!DB.members.length) box.innerHTML=`<div class="empty">${esc(T.noMembers)}</div>`;
+  else if(!list.length) box.innerHTML=`<div class="empty">—</div>`;
+  else box.innerHTML=list.map(m=>memberRowHTML(m)).join('');
+  bindMemberRows(box);
+}
+$('#search').oninput=e=>{ curSearch=e.target.value; renderMembers(); };
+$('#addFab').onclick=()=>openEdit(null);
+function addGroup(){ const n=prompt(T.groupNamePrompt,''); if(n&&n.trim()){ DB.groups.push({id:'g'+Date.now(),name:n.trim()}); save(); renderMembers(); } }
+
+//============ MEMBER DETAIL ============
+function openMember(id){ viewingId=id; showScreen('member'); $('#nav').style.display='none'; renderMember(); }
+$('#mBack').onclick=()=>{ $('#nav').style.display='flex'; showTab(curTab==='dashboard'?'dashboard':'members'); };
+$('#mEdit').onclick=()=>openEdit(viewingId);
+function renderMember(){
+  const m=DB.members.find(x=>x.id===viewingId); if(!m){ $('#mBack').onclick(); return; }
+  $('#mTitle').textContent=fullName(m);
+  const mig=monthsInGrade(m), ls=lastSeen(m);
+  let h='';
+  h+=`<div class="dtop"><div class="av">${esc(initials(m))}</div><div><div class="nm">${esc(fullName(m))}</div><div class="sub">${esc(groupName(m.group))}</div></div></div>`;
+  // belt + stripes card
+  h+=`<div class="card">
+    <div class="kv"><span class="k">${T.belt}</span><span>${beltChip(m.belt,m.stripes)} ${beltName(m.belt)}</span></div>
+    <div class="kv"><span class="k">${T.stripes}</span><div class="stripes" id="stripeEdit">${[0,1,2,3].map(i=>`<div class="stripe ${i<(m.stripes||0)?'on':''}" data-s="${i+1}"></div>`).join('')}</div></div>
+    ${mig!=null?`<div class="kv"><span class="k">${T.inGrade}</span><span>${mig} ${T.months}</span></div>`:''}
+    <div class="kv"><span class="k"></span><button class="miniadd" id="promoteBtn">${T.promote}</button></div>
+  </div>`;
+  // payments
+  h+=`<div class="h3">${T.payments}</div><div class="card"><div class="paygrid" id="payGrid">${payGridHTML(m)}</div></div>`;
+  // attendance summary
+  h+=`<div class="card"><div class="kv"><span class="k">${T.attendanceCount}</span><span>${(m.attendance||[]).length}</span></div><div class="kv"><span class="k">${T.lastSeen}</span><span>${ls?ls+' ('+daysSince(ls)+'d)':T.never}</span></div></div>`;
+  // notes
+  h+=`<div class="h3">${T.notes} <button class="miniadd" id="addNoteBtn" style="float:right">${T.addNote}</button></div><div id="notesBox">${notesHTML(m)}</div>`;
+  // competitions
+  h+=`<div class="h3">${T.comps} <button class="miniadd" id="addCompBtn" style="float:right">${T.addComp}</button></div><div id="compsBox">${compsHTML(m)}</div>`;
+  // belt history
+  if((m.beltHistory||[]).length){ h+=`<div class="h3">${T.beltHist}</div><div class="card">${m.beltHistory.slice().sort((a,b)=>a.date<b.date?1:-1).map(e=>`<div class="kv"><span class="k">${e.date}</span><span>${beltChip(e.belt,e.stripes)} ${beltName(e.belt)} · ${e.stripes}</span></div>`).join('')}</div>`; }
+  h+=`<button class="btn danger" id="delMember" style="margin-top:18px">${T.del}</button>`;
+  $('#memberBody').innerHTML=h;
+  // bind
+  $('#stripeEdit').querySelectorAll('.stripe').forEach(s=>s.onclick=()=>{ let v=+s.dataset.s; m.stripes=(m.stripes===v)?v-1:v; save(); renderMember(); });
+  $('#promoteBtn').onclick=()=>{ m.beltHistory=m.beltHistory||[]; m.beltHistory.push({date:todayStr(),belt:m.belt,stripes:m.stripes||0}); save(); renderMember(); };
+  $('#payGrid').querySelectorAll('.paym').forEach(p=>p.onclick=()=>{ const k=p.dataset.k; m.payments=m.payments||{}; m.payments[k]=!m.payments[k]; if(!m.payments[k]) delete m.payments[k]; save(); renderMember(); });
+  $('#addNoteBtn').onclick=()=>{ const t=prompt(T.notePh,''); if(t&&t.trim()){ m.notes=m.notes||[]; m.notes.unshift({date:todayStr(),text:t.trim()}); save(); renderMember(); } };
+  $('#addCompBtn').onclick=()=>{ const nm=prompt(T.compName,''); if(!nm||!nm.trim())return; const res=prompt(T.compResult,''); m.competitions=m.competitions||[]; m.competitions.unshift({date:todayStr(),name:nm.trim(),result:(res||'').trim()}); save(); renderMember(); };
+  $('#memberBody').querySelectorAll('[data-delnote]').forEach(x=>x.onclick=()=>{ m.notes.splice(+x.dataset.delnote,1); save(); renderMember(); });
+  $('#memberBody').querySelectorAll('[data-delcomp]').forEach(x=>x.onclick=()=>{ m.competitions.splice(+x.dataset.delcomp,1); save(); renderMember(); });
+  $('#delMember').onclick=()=>{ if(confirm(T.delMemberQ.replace('$',fullName(m)))){ DB.members=DB.members.filter(x=>x.id!==m.id); save(); $('#mBack').onclick(); } };
+}
+function payGridHTML(m){
+  const now=new Date(); let h='';
+  for(let i=7;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); const k=monthKey(d); const ok=isPaid(m,k);
+    h+=`<div class="paym ${ok?'ok':''}" data-k="${k}"><div class="mm">${pad(d.getMonth()+1)}</div><div class="yy">${d.getFullYear()}</div></div>`; }
+  return h;
+}
+function notesHTML(m){ const ns=m.notes||[]; if(!ns.length) return `<div class="empty" style="padding:14px">${T.noNotes}</div>`;
+  return ns.map((n,i)=>`<div class="note"><div><div>${esc(n.text)}</div><div class="dt">${n.date}</div></div><button class="x" data-delnote="${i}">✕</button></div>`).join(''); }
+function compsHTML(m){ const cs=m.competitions||[]; if(!cs.length) return `<div class="empty" style="padding:14px">${T.noComps}</div>`;
+  return cs.map((c,i)=>`<div class="note"><div><div>${esc(c.name)}${c.result?' — <b>'+esc(c.result)+'</b>':''}</div><div class="dt">${c.date}</div></div><button class="x" data-delcomp="${i}">✕</button></div>`).join(''); }
+
+//============ EDIT/ADD ============
+function openEdit(id){ editingId=id; showScreen('edit'); $('#nav').style.display='none'; renderEdit(); }
+$('#eCancel').onclick=()=>{ if(editingId){ openMember(editingId); } else { $('#nav').style.display='flex'; showTab('members'); } };
+function renderEdit(){
+  const m=editingId?DB.members.find(x=>x.id===editingId):{first:'',last:'',group:DB.groups[0]?.id,belt:'white',stripes:0,payments:{}};
+  $('#eTitle').textContent=editingId?T.editMember:T.addMember;
+  let h='';
+  h+=`<label class="fl">${T.firstName}</label><input class="inp" id="fFirst" value="${esc(m.first)}">`;
+  h+=`<label class="fl">${T.lastName}</label><input class="inp" id="fLast" value="${esc(m.last)}">`;
+  h+=`<label class="fl">${T.group}</label><select class="inp" id="fGroup">${DB.groups.map(g=>`<option value="${g.id}" ${g.id===m.group?'selected':''}>${esc(g.name)}</option>`).join('')}</select>`;
+  h+=`<label class="fl">${T.belt}</label><select class="inp" id="fBelt">${BELTS.map(b=>`<option value="${b}" ${b===m.belt?'selected':''}>${beltName(b)}</option>`).join('')}</select>`;
+  h+=`<label class="fl">${T.stripes}</label><select class="inp" id="fStripes">${[0,1,2,3,4].map(s=>`<option value="${s}" ${s===(m.stripes||0)?'selected':''}>${s}</option>`).join('')}</select>`;
+  h+=`<label class="fl">${T.paidThisMonth} (${monthKey()})</label><select class="inp" id="fPaid"><option value="0">—</option><option value="1" ${isPaid(m)?'selected':''}>✓</option></select>`;
+  $('#editBody').innerHTML=h;
+}
+$('#eSave').onclick=()=>{
+  const first=$('#fFirst').value.trim(); if(!first){ $('#fFirst').focus(); return; }
+  const data={first, last:$('#fLast').value.trim(), group:$('#fGroup').value, belt:$('#fBelt').value, stripes:+$('#fStripes').value};
+  const paidNow=$('#fPaid').value==='1';
+  if(editingId){ const m=DB.members.find(x=>x.id===editingId); Object.assign(m,data); m.payments=m.payments||{}; if(paidNow) m.payments[monthKey()]=true; else delete m.payments[monthKey()];
+    save(); openMember(editingId); }
+  else { const m={id:'m'+Date.now(),...data,payments:{},notes:[],competitions:[],attendance:[],beltHistory:[{date:todayStr(),belt:data.belt,stripes:data.stripes}]}; if(paidNow) m.payments[monthKey()]=true; DB.members.push(m); save(); $('#nav').style.display='flex'; showTab('members'); }
+};
+
+//============ ATTENDANCE ============
+let attGroup='all';
+function renderAttendance(){
+  $('#attTitle').textContent=T.attendance;
+  $('#attDateLbl').textContent=T.markToday+' · '+todayStr();
+  const gt=$('#attGroupTabs'); gt.innerHTML='';
+  [['all',T.all]].concat(DB.groups.map(g=>[g.id,g.name])).forEach(([id,name])=>{ const b=document.createElement('button'); b.className='chip'+(attGroup===id?' on':''); b.textContent=name; b.onclick=()=>{attGroup=id; renderAttendance();}; gt.appendChild(b); });
+  let list=DB.members.slice(); if(attGroup!=='all') list=list.filter(m=>m.group===attGroup);
+  list.sort((a,b)=>fullName(a).localeCompare(fullName(b)));
+  const today=todayStr();
+  const box=$('#attList');
+  if(!list.length){ box.innerHTML=`<div class="empty">—</div>`; return; }
+  box.innerHTML=list.map(m=>{ const here=(m.attendance||[]).includes(today);
+    return `<div class="mrow" data-att="${m.id}" style="${here?'border-color:var(--zr);box-shadow:0 0 0 1px var(--zr) inset':''}">
+      <div class="av">${esc(initials(m))}</div>
+      <div class="mid"><div class="nm">${esc(fullName(m))}</div><div class="sub">${beltChip(m.belt,m.stripes)}<span>${esc(groupName(m.group))}</span></div></div>
+      <div style="font-size:22px;color:${here?'var(--zr)':'var(--muted)'}">${here?'✓':'○'}</div>
+    </div>`; }).join('');
+  box.querySelectorAll('[data-att]').forEach(r=>r.onclick=()=>{ const m=DB.members.find(x=>x.id===r.dataset.att); m.attendance=m.attendance||[]; const i=m.attendance.indexOf(today); if(i<0) m.attendance.push(today); else m.attendance.splice(i,1); save(); renderAttendance(); });
+}
+$('#attBack')&&($('#attBack').onclick=()=>showTab('dashboard'));
+
+//============ SETTINGS ============
+function renderSettings(){
+  $('#setTitle').textContent=T.settings;
+  let h='';
+  h+=`<div class="card"><div class="kv"><span class="k">${T.language}</span><button class="iconbtn" id="setLang">${T.lang==='UA'?'EN':'UA'}</button></div>
+      <div class="kv"><span class="k">${T.theme}</span><button class="iconbtn" id="setTheme">${document.documentElement.getAttribute('data-theme')==='dark'?'🌙':'☀️'}</button></div></div>`;
+  h+=`<div class="h3">${T.export}</div><div class="card">
+      <button class="btn ghost" id="exportBtn" style="margin-bottom:10px">${T.export}</button>
+      <button class="btn ghost" id="importBtn">${T.import}</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none"></div>`;
+  h+=`<div class="card"><button class="btn ghost" id="changePinBtn">${T.changePin}</button></div>`;
+  h+=`<div class="empty" style="padding:18px 8px">${T.dataEnc}</div>`;
+  $('#settingsBody').innerHTML=h;
+  $('#setLang').onclick=toggleLang; $('#setTheme').onclick=toggleTheme;
+  $('#exportBtn').onclick=doExport; $('#importBtn').onclick=()=>$('#importFile').click();
+  $('#importFile').onchange=doImport; $('#changePinBtn').onclick=changePin;
+}
+async function doExport(){
+  const blob=await encryptDB();
+  const payload=JSON.stringify({app:'zrclub',v:1,salt:b64(SALT),db:blob});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([payload],{type:'application/json'}));
+  a.download='zrclub-backup-'+todayStr()+'.json'; a.click();
+}
+function doImport(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    try{
+      const p=JSON.parse(r.result);
+      if(p.app!=='zrclub') throw 0;
+      if(!confirm(T.importQ)) return;
+      const salt=ub64(p.salt); const key=await deriveKey(curPinForImport||'',salt);
+      // try with current KEY's pin? We need the pin used in the file. Use current KEY if same salt; else ask.
+      let data;
+      try{ data=await decryptWith(p.db,KEY); }
+      catch(_){ const pin=prompt('PIN'); data=await decryptWith(p.db,await deriveKey(pin||'',salt)); }
+      DB=data; await save(); showTab('dashboard'); alert(T.exported);
+    }catch(err){ alert(T.importBad); }
+  };
+  r.readAsText(f);
+}
+let curPinForImport='';
+function changePin(){
+  const np=prompt(T.setPin+' (4)'); if(!np||!/^\d{4}$/.test(np)){ return; }
+  const rp=prompt(T.repeatPin+' (4)'); if(rp!==np){ alert(T.pinMismatch); return; }
+  (async()=>{ const salt=crypto.getRandomValues(new Uint8Array(16)); KEY=await deriveKey(np,salt); SALT=salt; localStorage.setItem('zrclub_salt',b64(salt)); await save(); alert('OK'); })();
+}
+
+//============ THEME + LANG ============
+function applyTheme(){ document.documentElement.setAttribute('data-theme', DB?DB.settings.theme:(uiPrefs().theme||'dark')); const t=DB?DB.settings.theme:'dark'; $$('#themeBtn,#themeBtn2').forEach(b=>b&&(b.textContent=t==='dark'?'🌙':'☀️')); }
+function toggleTheme(){ const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'; if(DB) DB.settings.theme=t; document.documentElement.setAttribute('data-theme',t); saveUi(); if(DB) save(); applyTheme(); if(curTab==='settings') renderSettings(); }
+function applyLang(){ T=I18N[(DB?DB.settings.lang:uiPrefs().lang)||'ua']||I18N.ua; document.documentElement.setAttribute('lang',T.lang==='UA'?'uk':'en'); }
+function applyLangAll(){ applyLang(); applyTheme(); $$('#langBtn,#langBtn2').forEach(b=>b&&(b.textContent=T.lang==='UA'?'EN':'UA')); $$('[data-i18n]').forEach(el=>{ const k=el.dataset.i18n; if(T[k]) el.textContent=T[k]; }); }
+function toggleLang(){ const nl=(DB?DB.settings.lang:'ua')==='ua'?'en':'ua'; if(DB){ DB.settings.lang=nl; save(); } applyLangAll(); saveUi(); showTab(curTab); }
+$$('#langBtn,#langBtn2').forEach(b=>b&&(b.onclick=toggleLang));
+$$('#themeBtn,#themeBtn2').forEach(b=>b&&(b.onclick=toggleTheme));
+
+//============ INIT ============
+applyLang(); applyTheme(); setupLock();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
