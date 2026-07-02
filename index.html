@@ -199,8 +199,8 @@
   </div>
   <div class="body">
     <div class="h3" id="attDateLbl"></div>
-    <div class="seg" id="attGroupTabs"></div>
     <input class="search" id="attSearch" placeholder="…">
+    <div class="seg" id="attGroupTabs"></div>
     <div id="attList"></div>
   </div>
 </section>
@@ -268,7 +268,7 @@ const I18N={
    present:'тут', export:'Експорт (резервна копія)', import:'Імпорт', changePin:'Змінити PIN',
    theme:'Тема', language:'Мова', dataEnc:'🔒 Дані зашифровані PIN-ом і зберігаються лише на цьому пристрої.',
    newGroup:'Нова група…', addGroup:'＋ Група', groupNamePrompt:'Назва групи:', noComps:'Турнірів немає', noNotes:'Заметок немає',
-   manageGroups:'Групи', delGroupQ:'Видалити групу «$»? Учасники перейдуть в іншу.', cantDelLast:'Має лишитися хоча б одна група', attSearchPh:'Знайти будь-кого (з іншої групи)…', presentN:'Присутніх',
+   manageGroups:'Групи', delGroupQ:'Видалити групу «$»? Учасники перейдуть в іншу.', cantDelLast:'Має лишитися хоча б одна група', attSearchPh:'Пошук по імені…', presentN:'Прийшли', absentN:'Немає', allPeople:'Усі учасники',
    exported:'Файл збережено', importQ:'Замінити всі дані з файлу? Поточні буде втрачено.', importBad:'Не вдалося прочитати файл (невірний PIN або формат).',
    confirmDel:'Видалити?'},
  en:{lang:'EN', enterPin:'Enter PIN', setPin:'Create a PIN', repeatPin:'Repeat PIN', pinMismatch:"PIN didn't match, try again", wrongPin:'Wrong PIN',
@@ -289,7 +289,7 @@ const I18N={
    present:'here', export:'Export (backup)', import:'Import', changePin:'Change PIN',
    theme:'Theme', language:'Language', dataEnc:'🔒 Data is encrypted with your PIN and stored only on this device.',
    newGroup:'New group…', addGroup:'＋ Group', groupNamePrompt:'Group name:', noComps:'No competitions', noNotes:'No notes',
-   manageGroups:'Groups', delGroupQ:'Delete group “$”? Members will move to another.', cantDelLast:'At least one group must remain', attSearchPh:'Find anyone (from another group)…', presentN:'Present',
+   manageGroups:'Groups', delGroupQ:'Delete group “$”? Members will move to another.', cantDelLast:'At least one group must remain', attSearchPh:'Search by name…', presentN:'Present', absentN:'Absent', allPeople:'All members',
    exported:'File saved', importQ:'Replace all data from file? Current data will be lost.', importBad:'Could not read file (wrong PIN or format).',
    confirmDel:'Delete?'}
 };
@@ -568,17 +568,17 @@ let attGroup='all';
 function renderAttendance(){
   $('#attTitle').textContent=T.attendance;
   const today=todayStr();
-  const totalPresent=DB.members.filter(m=>(m.attendance||[]).includes(today)).length;
-  $('#attDateLbl').textContent=T.markToday+' · '+todayStr()+' · '+T.presentN+': '+totalPresent;
   $('#attSearch').placeholder=T.attSearchPh;
   $('#attSearch').oninput=()=>renderAttendance();
   const gt=$('#attGroupTabs'); gt.innerHTML='';
-  [['all',T.all]].concat(DB.groups.map(g=>[g.id,g.name])).forEach(([id,name])=>{ const b=document.createElement('button'); b.className='chip'+(attGroup===id?' on':''); b.textContent=name; b.onclick=()=>{attGroup=id; renderAttendance();}; gt.appendChild(b); });
+  [['all',T.allPeople]].concat(DB.groups.map(g=>[g.id,g.name])).forEach(([id,name])=>{ const b=document.createElement('button'); b.className='chip'+(attGroup===id?' on':''); b.textContent=name; b.onclick=()=>{attGroup=id; renderAttendance();}; gt.appendChild(b); });
   const q=($('#attSearch').value||'').trim().toLowerCase();
   let list=DB.members.slice();
   if(q) list=list.filter(m=>fullName(m).toLowerCase().includes(q));        // search everyone (any group)
   else if(attGroup!=='all') list=list.filter(m=>m.group===attGroup);
   list.sort((a,b)=>fullName(a).localeCompare(fullName(b)));
+  const presentN=list.filter(m=>(m.attendance||[]).includes(today)).length;
+  $('#attDateLbl').textContent=todayStr()+' · '+T.presentN+': '+presentN+' · '+T.absentN+': '+(list.length-presentN);
   const box=$('#attList');
   if(!list.length){ box.innerHTML=`<div class="empty">—</div>`; return; }
   box.innerHTML=list.map(m=>{ const here=(m.attendance||[]).includes(today);
