@@ -255,7 +255,7 @@ const I18N={
    members:'Учасники', attendance:'Відвідуваність', settings:'Налаштування',
    total:'Учасників', paidM:'Оплатили', unpaidM:'Борг', todayHere:'Сьогодні',
    beltDist:'Розподіл по поясах', inactive:'Давно не були', noInactive:'Усі активні 👌',
-   search:'Пошук…', all:'Усі', unpaidF:'Боржники', inactiveF:'Неактивні',
+   search:'Пошук…', all:'Усі', unpaidF:'Боржники', inactiveF:'Неактивні', paidF:'Оплатили', attRate:'Відвідуваність',
    noMembers:'Поки що порожньо.\nНатисніть ＋ щоб додати учасника.',
    firstName:'Імʼя', lastName:'Прізвище', group:'Група', belt:'Пояс', stripes:'Страйпи',
    paidThisMonth:'Оплата за цей місяць', addMember:'Новий учасник', editMember:'Редагувати',
@@ -276,7 +276,7 @@ const I18N={
    members:'Members', attendance:'Attendance', settings:'Settings',
    total:'Members', paidM:'Paid', unpaidM:'Due', todayHere:'Today',
    beltDist:'Belt distribution', inactive:'Inactive', noInactive:'All active 👌',
-   search:'Search…', all:'All', unpaidF:'Unpaid', inactiveF:'Inactive',
+   search:'Search…', all:'All', unpaidF:'Unpaid', inactiveF:'Inactive', paidF:'Paid', attRate:'Attendance',
    noMembers:'Empty for now.\nTap ＋ to add a member.',
    firstName:'First name', lastName:'Last name', group:'Group', belt:'Belt', stripes:'Stripes',
    paidThisMonth:'Paid this month', addMember:'New member', editMember:'Edit',
@@ -399,6 +399,18 @@ function lastSeen(m){ if(!m.attendance||!m.attendance.length) return null; retur
 function daysSince(ds){ if(!ds) return Infinity; return Math.floor((Date.now()-new Date(ds+'T00:00:00').getTime())/86400000); }
 function isInactive(m){ return daysSince(lastSeen(m))>21; }
 function monthsInGrade(m){ const h=(m.beltHistory||[]); if(!h.length) return null; const last=h.slice().sort((a,b)=>a.date<b.date?-1:1).pop(); return Math.floor((Date.now()-new Date(last.date+'T00:00:00').getTime())/2629800000); }
+// total distinct training days recorded across the whole club
+function totalSessions(){ const s=new Set(); DB.members.forEach(m=>(m.attendance||[]).forEach(d=>s.add(d))); return s.size; }
+// attendance rate of a member vs all sessions since they joined (first attendance or belt-history date)
+function attRate(m){
+  const days=[...new Set([].concat(...DB.members.map(x=>x.attendance||[])))].sort();
+  if(!days.length) return null;
+  const att=(m.attendance||[]);
+  const joined = (att.length?att.slice().sort()[0] : ((m.beltHistory||[])[0]||{}).date) || days[0];
+  const sessions=days.filter(d=>d>=joined).length;
+  if(!sessions) return null;
+  return {pct:Math.round(att.length/sessions*100), att:att.length, tot:sessions};
+}
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function beltChip(belt,stripes){
@@ -422,7 +434,7 @@ function renderDash(){
   h+=`<div class="h3">${T.navDash}</div>`;
   h+=`<div class="stat-grid">
     <div class="stat"><div class="n">${ms.length}</div><div class="l">${T.total}</div></div>
-    <div class="stat green"><div class="n">${paid}</div><div class="l">${T.paidM} · ${mk}</div></div>
+    <div class="stat green tap" id="goPaid"><div class="n">${paid}</div><div class="l">${T.paidM} · ${mk}</div></div>
     <div class="stat red tap" id="goUnpaid"><div class="n">${unpaid}</div><div class="l">${T.unpaidM} · ${mk}</div></div>
     <div class="stat blue"><div class="n">${here}</div><div class="l">${T.todayHere}</div></div>
   </div>`;
@@ -434,6 +446,7 @@ function renderDash(){
   else { inactives.forEach(m=>{ const ls=lastSeen(m); h+=memberRowHTML(m,`${T.lastSeen}: ${ls?ls+' ('+daysSince(ls)+'d)':T.never}`); }); h=h; }
   $('#dashBody').innerHTML=h;
   const gu=$('#goUnpaid'); if(gu) gu.onclick=()=>{ curFilter='unpaid'; showTab('members'); };
+  const gp=$('#goPaid'); if(gp) gp.onclick=()=>{ curFilter='paid'; showTab('members'); };
   bindMemberRows($('#dashBody'));
 }
 
@@ -459,10 +472,11 @@ function renderMembers(){
   const ga=document.createElement('button'); ga.className='chip'; ga.textContent=T.addGroup; ga.onclick=addGroup; gt.appendChild(ga);
   // filter chips
   const fc=$('#filterChips'); fc.innerHTML='';
-  [['all',T.all],['unpaid',T.unpaidF],['inactive',T.inactiveF]].forEach(([id,name])=>{ const b=document.createElement('button'); b.className='chip'+(curFilter===id?' on':''); b.textContent=name; b.onclick=()=>{curFilter=id; renderMembers();}; fc.appendChild(b); });
+  [['all',T.all],['paid',T.paidF],['unpaid',T.unpaidF],['inactive',T.inactiveF]].forEach(([id,name])=>{ const b=document.createElement('button'); b.className='chip'+(curFilter===id?' on':''); b.textContent=name; b.onclick=()=>{curFilter=id; renderMembers();}; fc.appendChild(b); });
   // list
   let list=DB.members.slice();
   if(curGroup!=='all') list=list.filter(m=>m.group===curGroup);
+  if(curFilter==='paid') list=list.filter(m=>isPaid(m));
   if(curFilter==='unpaid') list=list.filter(m=>!isPaid(m));
   if(curFilter==='inactive') list=list.filter(isInactive);
   if(curSearch) list=list.filter(m=>fullName(m).toLowerCase().includes(curSearch.toLowerCase()));
@@ -509,7 +523,10 @@ function renderMember(){
   // payments
   h+=`<div class="h3">${T.payments}</div><div class="card"><div class="paygrid" id="payGrid">${payGridHTML(m)}</div></div>`;
   // attendance summary
-  h+=`<div class="card"><div class="kv"><span class="k">${T.attendanceCount}</span><span>${(m.attendance||[]).length}</span></div><div class="kv"><span class="k">${T.lastSeen}</span><span>${ls?ls+' ('+daysSince(ls)+'d)':T.never}</span></div></div>`;
+  const ar=attRate(m);
+  h+=`<div class="card"><div class="kv"><span class="k">${T.attendanceCount}</span><span>${(m.attendance||[]).length}</span></div>
+    ${ar?`<div class="kv"><span class="k">${T.attRate}</span><span style="font-weight:800;color:${ar.pct>=70?'var(--zr)':ar.pct>=40?'var(--fg)':'var(--red)'}">${ar.pct}% <span style="color:var(--muted);font-weight:600">(${ar.att}/${ar.tot})</span></span></div>`:''}
+    <div class="kv"><span class="k">${T.lastSeen}</span><span>${ls?ls+' ('+daysSince(ls)+'d)':T.never}</span></div></div>`;
   // notes
   h+=`<div class="h3">${T.notes} <button class="miniadd" id="addNoteBtn" style="float:right">${T.addNote}</button></div><div id="notesBox">${notesHTML(m)}</div>`;
   // competitions
